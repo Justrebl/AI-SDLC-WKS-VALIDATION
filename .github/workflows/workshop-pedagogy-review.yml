@@ -1,0 +1,158 @@
+name: Workshop pedagogy review
+
+on:
+  workflow_run:
+    workflows: ["Workshop tester: Afternoon 2 validation report"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: workshop-pedagogy-review-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    if: >-
+      vars.WORKSHOP_TESTER_ENABLED == 'true' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.path == '.github/workflows/workshop-tester.lock.yml' &&
+        (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      copilot-requests: write
+    steps:
+      - name: Checkout trusted automation
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          path: automation
+          persist-credentials: false
+      - name: Checkout reviewed revision as data
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+      - name: Install Copilot CLI with Auto intelligence support
+        run: npm install --global @github/copilot@1.0.90-3
+      - name: Prepare isolated review material
+        env:
+          REVIEW_REPOSITORY: ${{ github.repository }}
+          REVIEW_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          TESTER_RUN_ID: ${{ github.event.workflow_run.id }}
+          TESTER_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          TESTER_RUN_URL: ${{ github.event.workflow_run.html_url }}
+          TESTER_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          REVIEW_RUN_ID: ${{ github.run_id }}
+          REVIEW_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node automation/tests/workshop/pedagogy/review.mjs prepare source automation "${RUNNER_TEMP}/pedagogy"
+      - name: Run read-only custom agent
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.WORKSHOP_PEDAGOGY_TOKEN || github.token }}
+        run: node automation/tests/workshop/pedagogy/review.mjs review "${RUNNER_TEMP}/pedagogy"
+      - name: Upload report for the publisher
+        uses: actions/upload-artifact@v4
+        with:
+          name: workshop-pedagogy-report
+          path: |
+            ${{ runner.temp }}/pedagogy/report.md
+            ${{ runner.temp }}/pedagogy/context.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Report incomplete execution
+        if: failure()
+        run: |
+          echo "## Pedagogy review incomplete" >> "$GITHUB_STEP_SUMMARY"
+          echo "The reviewer or report validation failed. No pedagogy issue was published; inspect this job's logs." >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    needs: review
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: workshop-pedagogy-report
+          path: report
+      - name: Create or refresh the owned pedagogy-review issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const report = fs.readFileSync('report/report.md', 'utf8');
+            const meta = JSON.parse(fs.readFileSync('report/context.json', 'utf8'));
+            const { owner, repo } = context.repo;
+            if (meta.repository !== `${owner}/${repo}` || !/^[a-f0-9]{40}$/.test(meta.sha) ||
+                !/^(tester-\d+-\d+|manual-\d+)$/.test(meta.key)) {
+              throw new Error('Invalid report provenance');
+            }
+            await github.rest.issues.getLabel({ owner, repo, name: 'pedagogy-review' });
+            const marker = `<!-- pedagogy-review:${meta.key} -->`;
+            const start = '<!-- pedagogy-report:start -->';
+            const end = '<!-- pedagogy-report:end -->';
+            if (report.includes(start) || report.includes(end)) {
+              throw new Error('Report contains reserved publication boundaries');
+            }
+            const owned = item => !item.pull_request &&
+              item.user?.login === 'github-actions[bot]' &&
+              item.title?.startsWith('[Pedagogy review] ') &&
+              item.body?.startsWith(`${marker}\n`);
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, labels: 'pedagogy-review', state: 'all', per_page: 100
+            });
+            let issue = existing.find(owned);
+            if (!issue) {
+              issue = (await github.rest.issues.create({
+                owner, repo,
+                title: `[Pedagogy review] ${meta.sha.slice(0, 7)} (${meta.key})`,
+                labels: ['pedagogy-review'],
+                body: `${marker}\n${start}\n${report}\n${end}`
+              })).data;
+            } else if (issue.body.includes(start) || issue.body.includes(end)) {
+              if (issue.body.split(start).length !== 2 || issue.body.split(end).length !== 2 ||
+                  issue.body.indexOf(end) <= issue.body.indexOf(start)) {
+                throw new Error('Ambiguous generated report boundaries; refusing to overwrite issue content');
+              }
+              const body = issue.body.slice(0, issue.body.indexOf(start)) +
+                `${start}\n${report}\n${end}` +
+                issue.body.slice(issue.body.indexOf(end) + end.length);
+              if (body !== issue.body) {
+                await github.rest.issues.update({ owner, repo, issue_number: issue.number, body });
+              }
+            } else if (issue.body.trim() !== `${marker}\n${report}`.trim()) {
+              // Legacy reports have no replaceable island; preserve their body and append once.
+              const { createHash } = require('node:crypto');
+              const updateMarker = `<!-- pedagogy-update:${meta.key}:${createHash('sha256').update(report).digest('hex')} -->`;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: issue.number, per_page: 100
+              });
+              if (!comments.some(comment => comment.user?.login === 'github-actions[bot]' &&
+                  comment.body?.startsWith(updateMarker))) {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: issue.number, body: `${updateMarker}\n${report}`
+                });
+              }
+            }
+            await core.summary.addRaw(report)
+              .addLink('Pedagogy review issue', issue.html_url).write();
+      - name: Report publishing failure
+        if: failure()
+        run: |
+          echo "## Pedagogy report publication failed" >> "$GITHUB_STEP_SUMMARY"
+          echo "Inspect the publisher logs and workshop-pedagogy-report artifact. Ensure the pedagogy-review label exists." >> "$GITHUB_STEP_SUMMARY"

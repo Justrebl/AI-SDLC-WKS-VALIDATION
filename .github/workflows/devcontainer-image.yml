@@ -1,0 +1,75 @@
+name: Devcontainer image
+
+# Builds the workshop toolchain image and publishes it to GitHub Container Registry.
+# The root .devcontainer.json pulls this image so Codespaces skip feature installation.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/devcontainer-image/.devcontainer/**"
+  pull_request:
+    paths:
+      - ".github/devcontainer-image/.devcontainer/**"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: devcontainer-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Compute image name and tags
+        id: meta
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/devcontainer"
+          tree="$(git rev-parse HEAD:.github/devcontainer-image | cut -c1-12)"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
+          echo "tree_tag=tree-${tree}" >> "$GITHUB_OUTPUT"
+          echo "Image: ${image}  definition tag: tree-${tree}"
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build, smoke-test and push
+        uses: devcontainers/ci@v0.3
+        env:
+          IMAGE_SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        with:
+          subFolder: .github/devcontainer-image
+          imageName: ${{ steps.meta.outputs.image }}
+          imageTag: latest,${{ steps.meta.outputs.tree_tag }}
+          cacheFrom: ${{ steps.meta.outputs.image }}:latest
+          push: ${{ github.event_name == 'pull_request' && 'never' || 'always' }}
+          runCmd: |
+            set -e
+            dotnet --version
+            node --version
+            gh --version
+            copilot --version
+            apm --version
+
+      - name: Summary
+        if: github.event_name != 'pull_request'
+        run: |
+          {
+            echo "### Published devcontainer image"
+            echo "- \`${{ steps.meta.outputs.image }}:latest\`"
+            echo "- \`${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tree_tag }}\`"
+            echo
+            echo "First publication only: make the package **public** in the package settings so Codespaces and the workshop tester can pull it anonymously."
+          } >> "$GITHUB_STEP_SUMMARY"

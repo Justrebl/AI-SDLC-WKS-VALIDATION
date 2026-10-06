@@ -1,0 +1,53 @@
+{
+  "name": "contoso-plugin-marketplace",
+  "owner": { "name": "Music Catalog Team" },
+  "metadata": {
+    "description": "Company-curated remote plugin examples for the Music Catalog workshop",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "hve-core",
+      "description": "HVE-Core full root bundle: Design Thinking and RPI. Required workshop install.",
+      "version": "3.2.2",
+      "source": {
+        "source": "github",
+        "repo": "microsoft/hve-core",
+        "sha": "f7bae49bf68988381a8e13472686c501aea13ebc"
+      }
+    },
+    {
+      "name": "java-development",
+      "description": "Java development catalog example. Advertised skills are absent at this source revision; browse only.",
+      "version": "1.0.0",
+      "source": {
+        "source": "github",
+        "repo": "github/awesome-copilot",
+        "path": "plugins/java-development",
+        "sha": "143a3d976b3c1603cc8932984d5e1f28501cb5fc"
+      }
+    },
+    {
+      "name": "java-modernization-studio",
+      "description": "Java modernization app-canvas catalog example. Canvas payload absent at this revision; browse only.",
+      "version": "1.0.2",
+      "source": {
+        "source": "github",
+        "repo": "github/awesome-copilot",
+        "path": "plugins/java-modernization-studio",
+        "sha": "143a3d976b3c1603cc8932984d5e1f28501cb5fc"
+      }
+    },
+    {
+      "name": "workiq",
+      "description": "Microsoft 365 WorkIQ catalog example. External authentication and read/write services; browse only.",
+      "version": "2.0.2",
+      "source": {
+        "source": "github",
+        "repo": "microsoft/work-iq",
+        "path": "plugins/workiq",
+        "sha": "7fde3f8e6477fc75c79a7d8386e8501105b2d9bd"
+      }
+    }
+  ]
+}

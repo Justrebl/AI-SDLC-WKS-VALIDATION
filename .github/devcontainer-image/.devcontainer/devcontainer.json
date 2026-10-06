@@ -1,0 +1,18 @@
+{
+  "name": "Agentic SDLC Workshop (prebuilt image)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "IMAGE_SOURCE": "${localEnv:IMAGE_SOURCE}"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    "./workshop-tools": {}
+  },
+  "remoteUser": "vscode"
+}

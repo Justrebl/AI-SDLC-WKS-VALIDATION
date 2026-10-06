@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "contoso-plugin-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "YOUR-ORG/YOUR-REPO"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "hve-core@contoso-plugin-marketplace": true
+  }
+}

@@ -1,0 +1,42 @@
+# Runs the API and front-end tests on every pull request and on pushes to main.
+# The `test` job is the required status check in solutions/afternoon-2/rulesets/main-tests-required.json.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/front/package-lock.json
+
+      - name: API tests
+        run: dotnet test MusicCatalog.slnx
+
+      - name: Install front-end dependencies
+        working-directory: src/front
+        run: npm ci
+
+      - name: Front-end tests
+        working-directory: src/front
+        run: npm test

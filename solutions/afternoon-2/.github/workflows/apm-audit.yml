@@ -1,0 +1,33 @@
+name: APM Audit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apm-audit:
+    name: apm-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout committed context
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up APM without rewriting deployed files
+        uses: microsoft/apm-action@v1
+        with:
+          apm-version: "0.33.0"
+          setup-only: true
+
+      - name: Audit committed APM context
+        run: apm audit --ci --no-cache --policy apm-policy.yml
+        env:
+          GITHUB_APM_PAT: ${{ github.token }}

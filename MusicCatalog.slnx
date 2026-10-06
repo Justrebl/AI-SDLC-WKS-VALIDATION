@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/api/">
+    <Project Path="src/api/MusicCatalog.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/api/">
+    <Project Path="tests/api/MusicCatalog.Api.Tests.csproj" />
+  </Folder>
+</Solution>

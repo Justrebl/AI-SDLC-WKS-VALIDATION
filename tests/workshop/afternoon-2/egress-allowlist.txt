@@ -1,0 +1,28 @@
+# Hosts the Afternoon 2 lab may reach from the tester Codespace, in addition to the
+# GitHub /meta domains (website, copilot, codespaces) that egress.sh adds at start-up.
+# One host per line. "example.com" also allows its subdomains; "*.example.com" is accepted.
+
+# GitHub
+github.com
+api.github.com
+githubusercontent.com
+githubcopilot.com
+ghcr.io
+pkg.github.com
+
+# npm (front end, Copilot CLI, gh-aw tooling)
+registry.npmjs.org
+npmjs.org
+
+# .NET SDK and NuGet
+api.nuget.org
+nuget.org
+dot.net
+dotnet.microsoft.com
+builds.dotnet.microsoft.com
+dotnetcli.azureedge.net
+
+# APM and HVE-Core installers
+aka.ms
+pypi.org
+files.pythonhosted.org

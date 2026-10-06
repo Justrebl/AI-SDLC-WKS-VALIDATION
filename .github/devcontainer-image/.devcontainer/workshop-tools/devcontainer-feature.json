@@ -1,0 +1,17 @@
+{
+  "id": "workshop-tools",
+  "version": "1.0.0",
+  "name": "Agentic SDLC workshop tools",
+  "description": "Installs GitHub Copilot CLI and the APM CLI system-wide.",
+  "options": {
+    "copilotVersion": {
+      "type": "string",
+      "default": "latest",
+      "description": "npm version or dist-tag of @github/copilot."
+    }
+  },
+  "installsAfter": [
+    "ghcr.io/devcontainers/features/node",
+    "ghcr.io/devcontainers/features/github-cli"
+  ]
+}

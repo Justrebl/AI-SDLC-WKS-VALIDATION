@@ -1,0 +1,24 @@
+# Repository-level APM policy used in AI SDLC with GitHub and GitHub Copilot, Level 4.
+# Schema: https://microsoft.github.io/apm/reference/policy-schema/  (v0.2 working-draft schema)
+# Evaluate with: apm audit --ci --policy apm-policy.yml
+# Organization and enterprise policies can only tighten these rules (inheritance via `extends`).
+name: music-catalog-policy
+version: 1.0.0
+enforcement: block
+
+dependencies:
+  allow:
+    - "microsoft/**"
+  require_pinned_constraint: true
+  max_depth: 3
+
+mcp:
+  trust:
+    # allow | warn | deny - treatment of MCP servers defined inline in apm.yml
+    self_defined: deny
+
+executables:
+  # Hooks, bin/ executables, self-defined MCP servers, LSP servers and canvas extensions
+  # from these packages must never deploy. Deny always wins over local consent.
+  deny:
+    - "untrusted-org/*"

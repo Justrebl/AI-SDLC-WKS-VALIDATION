@@ -1,0 +1,9 @@
+name: music-catalog
+version: 0.1.0
+description: Music Catalog workshop app with HVE-Core pinned as a repository-owned APM dependency.
+targets:
+  - copilot
+dependencies:
+  apm:
+    # HVE-Core pinned by commit SHA (the v3.2.2 release commit). Release tags are not resolvable as APM refs.
+    - microsoft/hve-core#1dbd6a7ea90b74accaf8c809262e38952bd4c359

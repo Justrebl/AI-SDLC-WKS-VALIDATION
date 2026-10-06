@@ -1,0 +1,23 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+
+# Node
+node_modules/
+dist/
+*.log
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+
+# TypeScript build info
+*.tsbuildinfo
+
+# APM
+apm_modules/
+
+# HVE-Core working state (curate, never commit)
+.copilot-tracking/

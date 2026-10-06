@@ -1,0 +1,12 @@
+{
+  "name": "music-catalog-conventions",
+  "description": "Team conventions for the Music Catalog mono-repo: API endpoint skill and test-writer agent.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Music Catalog Team"
+  },
+  "license": "MIT",
+  "keywords": ["dotnet", "react", "testing", "workshop"],
+  "agents": "agents/",
+  "skills": "skills/"
+}
